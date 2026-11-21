@@ -154,14 +154,25 @@ function createParser(): XMLParser {
     parseTagValue: false,
     trimValues: true,
     isArray: (tagName: string): boolean =>
-      ['m', 'increment', 'draw', 'point', 'line', 'spline', 'arc', 'detail', 'node'].includes(
-        tagName,
-      ),
+      [
+        'm',
+        'increment',
+        'variable',
+        'draw',
+        'draftBlock',
+        'point',
+        'line',
+        'spline',
+        'arc',
+        'detail',
+        'piece',
+        'node',
+      ].includes(tagName),
   });
 }
 
 function parseSmmeRoot(vit: XmlRecord): InspectedMeasurements {
-  const version = asString(vit.version, '0.5.0');
+  const version = asString(vit.version, '0.3.4');
   const unit = asUnit(vit.unit);
   const readOnly = asString(vit['read-only'], 'false') === 'true';
   const pmSystem = asString(vit.pm_system, '998');
@@ -242,7 +253,9 @@ function extractCalculationNodes(
     const name = idToName.get(id) ?? `${item.tag}_${id}`;
     const type = asString(
       item.record['@_type'],
-      item.tag === 'line' ? asString(item.record['@_typeLine'], 'solidLine') : item.tag,
+      item.tag === 'line'
+        ? asString(item.record['@_lineType'] ?? item.record['@_typeLine'], 'solidLine')
+        : item.tag,
     );
 
     const references: Record<string, string> = {};
@@ -307,7 +320,8 @@ function extractDetailPieces(
   }
 
   const pieces: InspectedDetailPiece[] = [];
-  for (const rawDetail of asArray(details.detail)) {
+  const rawPieces = [...asArray(details.piece), ...asArray(details.detail)];
+  for (const rawDetail of rawPieces) {
     if (!isRecord(rawDetail)) {
       continue;
     }
@@ -350,7 +364,7 @@ function extractDetailPieces(
           inspectedNode.reverse = asString(rawReverse) === '1' || asString(rawReverse) === 'true';
         }
 
-        const rawPassmark = rawNode['@_passmark'];
+        const rawPassmark = rawNode['@_notch'] ?? rawNode['@_passmark'];
         if (rawPassmark !== undefined) {
           inspectedNode.passmark =
             asString(rawPassmark) === 'true' || asString(rawPassmark) === '1';
@@ -381,8 +395,17 @@ function parseSm2dRoot(pattern: XmlRecord): InspectedPattern {
   const measurementsFile = asString(pattern.measurements, '');
 
   const increments: InspectedIncrement[] = [];
-  if (isRecord(pattern.increments)) {
-    for (const rawInc of asArray(pattern.increments.increment)) {
+  const variablesContainer = isRecord(pattern.variables)
+    ? pattern.variables
+    : isRecord(pattern.increments)
+      ? pattern.increments
+      : undefined;
+  if (variablesContainer !== undefined) {
+    const rawVars = [
+      ...asArray(variablesContainer.variable),
+      ...asArray(variablesContainer.increment),
+    ];
+    for (const rawInc of rawVars) {
       if (!isRecord(rawInc)) {
         continue;
       }
@@ -397,15 +420,20 @@ function parseSm2dRoot(pattern: XmlRecord): InspectedPattern {
 
   const drawBlocks: InspectedDrawBlock[] = [];
   const globalIdToName = new Map<number, string>();
+  const rawBlocks = [...asArray(pattern.draftBlock), ...asArray(pattern.draw)];
 
-  for (const rawDraw of asArray(pattern.draw)) {
+  for (const rawDraw of rawBlocks) {
     if (!isRecord(rawDraw)) {
       continue;
     }
     const blockName = asString(rawDraw['@_name'], 'Unnamed_Block');
     const calculation = extractCalculationNodes(rawDraw.calculation, globalIdToName);
     const proxyToCalc = buildModelingProxyMap(rawDraw.modeling);
-    const pieces = extractDetailPieces(rawDraw.details, proxyToCalc, globalIdToName);
+    const pieces = extractDetailPieces(
+      rawDraw.pieces ?? rawDraw.details,
+      proxyToCalc,
+      globalIdToName,
+    );
 
     drawBlocks.push({
       name: blockName,
@@ -444,6 +472,10 @@ export function inspectXmlContent(xmlContent: string): InspectedDocument {
     throw new XmlInspectionError('INVALID_XML', 'Parsed XML did not produce an object root.');
   }
 
+  if (isRecord(parsed.smis)) {
+    return parseSmmeRoot(parsed.smis);
+  }
+
   if (isRecord(parsed.vit)) {
     return parseSmmeRoot(parsed.vit);
   }
@@ -454,6 +486,6 @@ export function inspectXmlContent(xmlContent: string): InspectedDocument {
 
   throw new XmlInspectionError(
     'UNSUPPORTED_DOCUMENT',
-    'XML document must have either a <vit> (.smme) or <pattern> (.sm2d) root element.',
+    'XML document must have a <smis>/<vit> (.smme) or <pattern> (.sm2d) root element.',
   );
 }

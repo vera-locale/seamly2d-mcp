@@ -11,7 +11,7 @@ import { BODICE_BACK_FIXTURE } from '../fixtures/bodice-back.js';
 describe('Pattern Inspector (round-trip XML parsing)', () => {
   it('round-trips a serialized .smme document', () => {
     const xml = serializeSmme({
-      version: '0.5.0',
+      version: '0.3.4',
       readOnly: false,
       notes: 'EU Size 38',
       unit: 'cm',
@@ -25,7 +25,7 @@ describe('Pattern Inspector (round-trip XML parsing)', () => {
     const inspected = inspectXmlContent(xml);
     expect(inspected.documentType).toBe('smme');
     if (inspected.documentType === 'smme') {
-      expect(inspected.version).toBe('0.5.0');
+      expect(inspected.version).toBe('0.3.4');
       expect(inspected.unit).toBe('cm');
       expect(inspected.notes).toBe('EU Size 38');
       expect(inspected.measurements).toEqual([
@@ -61,7 +61,7 @@ describe('Pattern Inspector (round-trip XML parsing)', () => {
       expect(block?.name).toBe('Bodice_Back');
       expect(block?.calculation).toHaveLength(11);
 
-      const backNeckline = block?.calculation.find((n) => n.name === 'back_neckline');
+      const backNeckline = block?.calculation.find((n) => n.tag === 'spline' && n.id === 7);
       expect(backNeckline?.tag).toBe('spline');
       expect(backNeckline?.references).toEqual({ point1: 'A5', point4: 'A4' });
       expect(backNeckline?.formulas.length1).toBe('Line_A_A4 * 0.55');
@@ -73,10 +73,10 @@ describe('Pattern Inspector (round-trip XML parsing)', () => {
       expect(piece?.grainlineLengthCm).toBe(20);
       expect(piece?.nodes.map((n) => n.targetName)).toEqual([
         'A5',
-        'back_neckline',
+        'spline_7',
         'A4',
         'A7',
-        'back_armhole',
+        'spline_10',
         'A6',
         'A8',
         'A1',

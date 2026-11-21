@@ -4,12 +4,19 @@ import { escapeXmlText, formatAttrs } from './xml-escape.js';
 export function serializeSmme(doc: MeasurementsDocument): string {
   const lines: string[] = [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<vit>',
+    '<smis>',
     `    <version>${escapeXmlText(doc.version)}</version>`,
     `    <read-only>${doc.readOnly ? 'true' : 'false'}</read-only>`,
     doc.notes.length > 0 ? `    <notes>${escapeXmlText(doc.notes)}</notes>` : '    <notes/>',
     `    <unit>${escapeXmlText(doc.unit)}</unit>`,
     `    <pm_system>${escapeXmlText(doc.pmSystem)}</pm_system>`,
+    '    <personal>',
+    '        <family-name/>',
+    '        <given-name/>',
+    '        <birth-date>1800-01-01</birth-date>',
+    '        <gender>unknown</gender>',
+    '        <email/>',
+    '    </personal>',
   ];
 
   if (doc.measurements.length === 0) {
@@ -26,6 +33,6 @@ export function serializeSmme(doc: MeasurementsDocument): string {
     lines.push('    </body-measurements>');
   }
 
-  lines.push('</vit>');
+  lines.push('</smis>');
   return `${lines.join('\n')}\n`;
 }

@@ -58,7 +58,7 @@ export async function executeManageMeasurements(
   }));
 
   const document: MeasurementsDocument = {
-    version: '0.5.0',
+    version: '0.3.4',
     readOnly,
     notes,
     unit: input.unit,

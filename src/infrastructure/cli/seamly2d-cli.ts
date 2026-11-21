@@ -151,9 +151,9 @@ export class Seamly2DCli {
     const formatCode = EXPORT_FORMAT_CODES[options.format];
     const args: string[] = [
       '-b',
-      options.exportDir,
-      '-d',
       options.outputName,
+      '-d',
+      options.exportDir,
       '-f',
       formatCode,
       '-m',

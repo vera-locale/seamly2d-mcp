@@ -4,9 +4,9 @@ import { serializeSm2d, serializeSmme } from '../../src/infrastructure/index.js'
 import { BODICE_BACK_FIXTURE } from '../fixtures/bodice-back.js';
 
 describe('XML Serializers (.smme and .sm2d)', () => {
-  it('serializes .smme v0.5.0 deterministically', () => {
+  it('serializes .smme v0.3.4 (<smis>) deterministically', () => {
     const xml = serializeSmme({
-      version: '0.5.0',
+      version: '0.3.4',
       readOnly: false,
       notes: '',
       unit: 'cm',
@@ -20,17 +20,24 @@ describe('XML Serializers (.smme and .sm2d)', () => {
     expect(xml).toBe(
       [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        '<vit>',
-        '    <version>0.5.0</version>',
+        '<smis>',
+        '    <version>0.3.4</version>',
         '    <read-only>false</read-only>',
         '    <notes/>',
         '    <unit>cm</unit>',
         '    <pm_system>998</pm_system>',
+        '    <personal>',
+        '        <family-name/>',
+        '        <given-name/>',
+        '        <birth-date>1800-01-01</birth-date>',
+        '        <gender>unknown</gender>',
+        '        <email/>',
+        '    </personal>',
         '    <body-measurements>',
         '        <m name="bust_circ" value="92"/>',
         '        <m name="waist_circ" value="74"/>',
         '    </body-measurements>',
-        '</vit>',
+        '</smis>',
         '',
       ].join('\n'),
     );
@@ -54,14 +61,14 @@ describe('XML Serializers (.smme and .sm2d)', () => {
     expect(xml).toContain('<unit>cm</unit>');
     expect(xml).toContain('<measurements>standard_size_38.smme</measurements>');
     expect(xml).toContain(
-      '<increment description="Quarter bust ease in cm" formula="2" name="#ease_bust"/>',
+      '<variable description="Quarter bust ease in cm" formula="2" name="#ease_bust"/>',
     );
-    expect(xml).toContain('<draw name="Bodice_Back">');
+    expect(xml).toContain('<draftBlock name="Bodice_Back">');
     expect(xml).toContain(
       '<point id="1" mx="0.132292" my="0.264583" name="A" type="single" x="1" y="1"/>',
     );
     expect(xml).toContain(
-      '<spline angle1="0" angle2="270" color="black" id="7" length1="Line_A_A4 * 0.55" length2="1.1" name="back_neckline" point1="6" point4="5" type="simpleInteractive"/>',
+      '<spline angle1="0" angle2="270" color="black" id="7" length1="Line_A_A4 * 0.55" length2="1.1" point1="6" point4="5" type="simpleInteractive"/>',
     );
     expect(xml).toContain(
       '<point id="12" idObject="6" inUse="true" mx="0.132292" my="0.264583" type="modeling"/>',
@@ -71,8 +78,8 @@ describe('XML Serializers (.smme and .sm2d)', () => {
     expect(xml).toContain(
       '<grainline arrows="0" length="20" mx="0" my="0" rotation="90" visible="true"/>',
     );
-    expect(xml).toContain('<node id="21" idObject="12" type="NodePoint"/>');
-    expect(xml).toContain('<node id="22" idObject="13" reverse="0" type="NodeSpline"/>');
+    expect(xml).toContain('<node idObject="12" type="NodePoint"/>');
+    expect(xml).toContain('<node idObject="13" reverse="0" type="NodeSpline"/>');
   });
 
   it('serializes reverse="1" on NodeSpline/NodeArc and passmark attributes on NodePoint', () => {
@@ -122,7 +129,7 @@ describe('XML Serializers (.smme and .sm2d)', () => {
     expect(xml).toContain('<notes>Draft notes</notes>');
     expect(xml).toContain('seamAllowance="false"');
     expect(xml).toContain(
-      'passmark="true" passmarkAngle="straightforward" passmarkLine="one" type="NodePoint"/>',
+      'notch="true" notchSubtype="straightforward" notchType="slit" type="NodePoint"/>',
     );
     expect(xml).toContain('reverse="1" type="NodeSpline"/>');
     expect(xml).toContain('reverse="1" type="NodeArc"/>');
@@ -131,7 +138,7 @@ describe('XML Serializers (.smme and .sm2d)', () => {
 
   it('serializes empty .smme measurements and all 11 point types + lines in .sm2d', () => {
     const emptySmme = serializeSmme({
-      version: '0.5.0',
+      version: '0.3.4',
       readOnly: true,
       notes: 'Empty table',
       unit: 'mm',
@@ -219,10 +226,10 @@ describe('XML Serializers (.smme and .sm2d)', () => {
     expect(xml).toContain('type="lineIntersect"');
     expect(xml).toContain('type="lineIntersectAxis"');
     expect(xml).toContain('type="shoulder"');
-    expect(xml).toContain('typeLine="dotLine"');
+    expect(xml).toContain('lineType="dotLine"');
     expect(xml).toContain('type="cutSpline"');
     expect(xml).toContain('type="cutArc"');
     expect(xml).toContain('<modeling/>');
-    expect(xml).toContain('<details/>');
+    expect(xml).toContain('<pieces/>');
   });
 });

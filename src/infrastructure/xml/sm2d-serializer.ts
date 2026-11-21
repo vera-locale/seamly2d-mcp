@@ -16,8 +16,8 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
       ['firstPoint', el.firstPointId],
       ['id', el.id],
       ['lineColor', 'black'],
+      ['lineType', el.lineType],
       ['secondPoint', el.secondPointId],
-      ['typeLine', el.lineType],
     ]);
     return `            <line ${attrs}/>`;
   }
@@ -30,7 +30,6 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
       ['id', el.id],
       ['length1', el.length1],
       ['length2', el.length2],
-      ['name', el.name],
       ['point1', el.point1Id],
       ['point4', el.point4Id],
       ['type', 'simpleInteractive'],
@@ -45,7 +44,6 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
       ['center', el.centerId],
       ['color', 'black'],
       ['id', el.id],
-      ['name', el.name],
       ['radius', el.radius],
       ['type', 'simple'],
     ]);
@@ -72,11 +70,11 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['id', el.id],
         ['length', el.length],
         ['lineColor', 'black'],
+        ['lineType', 'solidLine'],
         ['mx', DEFAULT_MX],
         ['my', DEFAULT_MY],
         ['name', el.name],
         ['type', 'endLine'],
-        ['typeLine', 'hair'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -86,12 +84,12 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['id', el.id],
         ['length', el.length],
         ['lineColor', 'black'],
+        ['lineType', 'none'],
         ['mx', DEFAULT_MX],
         ['my', DEFAULT_MY],
         ['name', el.name],
         ['secondPoint', el.secondPointId],
         ['type', 'alongLine'],
-        ['typeLine', 'none'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -102,12 +100,12 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['id', el.id],
         ['length', el.length],
         ['lineColor', 'black'],
+        ['lineType', 'solidLine'],
         ['mx', DEFAULT_MX],
         ['my', DEFAULT_MY],
         ['name', el.name],
         ['secondPoint', el.secondPointId],
         ['type', 'normal'],
-        ['typeLine', 'hair'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -117,13 +115,13 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['id', el.id],
         ['length', el.length],
         ['lineColor', 'black'],
+        ['lineType', 'solidLine'],
         ['mx', DEFAULT_MX],
         ['my', DEFAULT_MY],
         ['name', el.name],
         ['secondPoint', el.secondPointId],
         ['thirdPoint', el.thirdPointId],
         ['type', 'bisector'],
-        ['typeLine', 'hair'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -135,7 +133,7 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['my', DEFAULT_MY],
         ['name', el.name],
         ['secondPoint', el.secondPointId],
-        ['type', 'pointOfIntersection'],
+        ['type', 'intersectXY'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -159,13 +157,13 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['basePoint', el.basePointId],
         ['id', el.id],
         ['lineColor', 'black'],
+        ['lineType', 'solidLine'],
         ['mx', DEFAULT_MX],
         ['my', DEFAULT_MY],
         ['name', el.name],
         ['p1Line', el.p1LineId],
         ['p2Line', el.p2LineId],
         ['type', 'lineIntersectAxis'],
-        ['typeLine', 'hair'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -198,6 +196,7 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['id', el.id],
         ['length', el.length],
         ['lineColor', 'black'],
+        ['lineType', 'solidLine'],
         ['mx', DEFAULT_MX],
         ['my', DEFAULT_MY],
         ['name', el.name],
@@ -205,7 +204,6 @@ function serializeCalculationElement(el: ResolvedCalculationElement): string {
         ['p2Line', el.p2LineId],
         ['pShoulder', el.pShoulderId],
         ['type', 'shoulder'],
-        ['typeLine', 'hair'],
       ]);
       return `            <point ${attrs}/>`;
     }
@@ -243,15 +241,12 @@ function serializeModelingProxy(proxy: ResolvedModelingProxy): string {
 }
 
 function serializeDetailNode(node: ResolvedDetailNode): string {
-  const attrs: Array<readonly [string, string | number]> = [
-    ['id', node.id],
-    ['idObject', node.idObject],
-  ];
+  const attrs: Array<readonly [string, string | number]> = [['idObject', node.idObject]];
 
   if (node.type === 'NodePoint' && node.passmark === true) {
-    attrs.push(['passmark', 'true']);
-    attrs.push(['passmarkAngle', 'straightforward']);
-    attrs.push(['passmarkLine', 'one']);
+    attrs.push(['notch', 'true']);
+    attrs.push(['notchSubtype', 'straightforward']);
+    attrs.push(['notchType', 'slit']);
   }
 
   if (node.type === 'NodeSpline' || node.type === 'NodeArc') {
@@ -264,9 +259,8 @@ function serializeDetailNode(node: ResolvedDetailNode): string {
 
 function serializeDetailPiece(piece: ResolvedDetailPiece): string[] {
   const hasSeamAllowance = piece.seamAllowanceCm > 0;
-  const detailAttrs = formatAttrs([
+  const pieceAttrs = formatAttrs([
     ['forbidFlipping', 'false'],
-    ['forceFlipping', 'false'],
     ['hideMainPath', 'false'],
     ['id', piece.id],
     ['inLayout', 'true'],
@@ -317,14 +311,14 @@ function serializeDetailPiece(piece: ResolvedDetailPiece): string[] {
   ]);
 
   const lines: string[] = [
-    `            <detail ${detailAttrs}>`,
+    `            <piece ${pieceAttrs}>`,
     `                <data ${dataAttrs}/>`,
     `                <patternInfo ${patternInfoAttrs}/>`,
     `                <grainline ${grainlineAttrs}/>`,
     '                <nodes>',
     ...piece.nodes.map(serializeDetailNode),
     '                </nodes>',
-    '            </detail>',
+    '            </piece>',
   ];
 
   return lines;
@@ -344,22 +338,22 @@ export function serializeSm2d(ast: ResolvedPatternAst): string {
   ];
 
   if (ast.increments.length === 0) {
-    lines.push('    <increments/>');
+    lines.push('    <variables/>');
   } else {
-    lines.push('    <increments>');
+    lines.push('    <variables>');
     for (const inc of ast.increments) {
       const attrs = formatAttrs([
         ['description', inc.description],
         ['formula', inc.formula],
         ['name', inc.name],
       ]);
-      lines.push(`        <increment ${attrs}/>`);
+      lines.push(`        <variable ${attrs}/>`);
     }
-    lines.push('    </increments>');
+    lines.push('    </variables>');
   }
 
   for (const block of ast.drawBlocks) {
-    lines.push(`    <draw ${formatAttrs([['name', block.name]])}>`);
+    lines.push(`    <draftBlock ${formatAttrs([['name', block.name]])}>`);
 
     if (block.calculation.length === 0) {
       lines.push('        <calculation/>');
@@ -382,16 +376,16 @@ export function serializeSm2d(ast: ResolvedPatternAst): string {
     }
 
     if (block.details.length === 0) {
-      lines.push('        <details/>');
+      lines.push('        <pieces/>');
     } else {
-      lines.push('        <details>');
+      lines.push('        <pieces>');
       for (const piece of block.details) {
         lines.push(...serializeDetailPiece(piece));
       }
-      lines.push('        </details>');
+      lines.push('        </pieces>');
     }
 
-    lines.push('    </draw>');
+    lines.push('    </draftBlock>');
   }
 
   lines.push('</pattern>');

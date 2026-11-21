@@ -130,7 +130,7 @@ export interface MeasurementEntry {
 }
 
 export interface MeasurementsDocument {
-  version: '0.5.0';
+  version: '0.3.4';
   readOnly: boolean;
   notes: string;
   unit: MeasurementUnit;

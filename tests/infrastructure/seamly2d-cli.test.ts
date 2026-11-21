@@ -1,10 +1,19 @@
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  executeBuildParametricPattern,
+  executeManageMeasurements,
+} from '../../src/application/index.js';
 import {
   type ExecFileFn,
   resolveSeamlyBinaryPath,
   Seamly2DCli,
   SeamlyCliError,
+  WorkspaceRepository,
 } from '../../src/infrastructure/index.js';
+import { BODICE_BACK_FIXTURE, STANDARD_SIZE_38_MEASUREMENTS } from '../fixtures/bodice-back.js';
 
 describe('Seamly2DCli', () => {
   it('resolves binary path from env var, macOS default, and Linux default', () => {
@@ -46,9 +55,9 @@ describe('Seamly2DCli', () => {
         '/usr/local/bin/seamly2d',
         [
           '-b',
-          '/ws/exports',
-          '-d',
           'bodice_back_base',
+          '-d',
+          '/ws/exports',
           '-f',
           expectedCode,
           '-m',
@@ -171,10 +180,73 @@ describe('Seamly2DCli', () => {
   });
 
   it.skipIf(!process.env.SEAMLY2D_PATH)(
-    'opt-in integration: verifies configured SEAMLY2D_PATH binary is invokable',
-    () => {
-      const cli = new Seamly2DCli();
-      expect(cli.getBinaryPath()).toBe(process.env.SEAMLY2D_PATH);
+    'opt-in integration: compiles and exports Bodice Back Block with #variables to SVG via real Seamly2D binary',
+    async () => {
+      const tempDir = await mkdtemp(path.join(os.tmpdir(), 'seamly2d-real-cli-'));
+      try {
+        const workspace = new WorkspaceRepository(tempDir);
+        const meas = await executeManageMeasurements(
+          {
+            filename: 'standard_size_38',
+            unit: 'cm',
+            mode: 'overwrite',
+            measurements: {
+              ...STANDARD_SIZE_38_MEASUREMENTS,
+              '@back_waist_length': 41,
+            },
+          },
+          workspace,
+        );
+        // Seamly2D requires custom measurement names (not in its built-in dictionary) to be prefixed with '@'
+        const realFixture = {
+          ...BODICE_BACK_FIXTURE,
+          drawBlocks: BODICE_BACK_FIXTURE.drawBlocks.map((block) => ({
+            ...block,
+            elements: block.elements.map((el) => {
+              if (el.type === 'endLine' && typeof el.length === 'string') {
+                return {
+                  ...el,
+                  length: el.length.replaceAll('back_waist_length', '@back_waist_length'),
+                };
+              }
+              return el;
+            }),
+          })),
+        };
+        // Remove non-standard measurement name from smme for strict Seamly2D known-value check
+        await executeManageMeasurements(
+          {
+            filename: 'standard_size_38',
+            unit: 'cm',
+            mode: 'overwrite',
+            measurements: {
+              bust_circ: 92,
+              waist_circ: 74,
+              neck_circ: 36,
+              '@back_waist_length': 41,
+              shoulder_length: 12.5,
+            },
+          },
+          workspace,
+        );
+        const pattern = await executeBuildParametricPattern(realFixture, workspace);
+        const exportDir = await workspace.ensureDirectory('exports');
+
+        const cli = new Seamly2DCli();
+        const result = await cli.compileAndExport({
+          patternPath: pattern.filePath,
+          measurementsPath: meas.filePath,
+          exportDir,
+          outputName: 'bodice_back_base',
+          format: 'svg',
+        });
+
+        expect(result.exitCode).toBe(0);
+        const files = await readdir(exportDir);
+        expect(files.some((f) => f.endsWith('.svg'))).toBe(true);
+      } finally {
+        await rm(tempDir, { recursive: true, force: true });
+      }
     },
   );
 });
