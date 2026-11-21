@@ -1,0 +1,37 @@
+export type { DomainErrorCode, DomainErrorContext } from './errors.js';
+export { DomainValidationError } from './errors.js';
+export { IdRegistry } from './id-registry.js';
+export { PatternAstBuilder } from './pattern-ast-builder.js';
+export type {
+  ArcNode,
+  BaseNode,
+  CalculationElement,
+  ContourItemKind,
+  DetailContourItem,
+  DetailNodeXmlType,
+  DetailPiece,
+  DrawBlockInput,
+  Formula,
+  IncrementDefinition,
+  LineNode,
+  LineStyle,
+  MeasurementEntry,
+  MeasurementsDocument,
+  MeasurementUnit,
+  PatternInput,
+  PointNode,
+  ResolvedArcNode,
+  ResolvedCalculationElement,
+  ResolvedDetailNode,
+  ResolvedDetailPiece,
+  ResolvedDrawBlock,
+  ResolvedIncrement,
+  ResolvedLineNode,
+  ResolvedModelingProxy,
+  ResolvedPatternAst,
+  ResolvedPointNode,
+  ResolvedSplineNode,
+  SplineNode,
+  SymbolKind,
+  SymbolMappingEntry,
+} from './types.js';
