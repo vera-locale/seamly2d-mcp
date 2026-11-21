@@ -1,14 +1,16 @@
 # seamly2d-mcp
 
-A production-grade **Model Context Protocol (MCP)** server in strict TypeScript that enables AI agents to programmatically draft parametric [Seamly2D](https://seamly.io/) sewing patterns (`.sm2d`), manage body measurement tables (`.smme`), inspect existing drafts, and compile/export patterns to **SVG**, **PDF**, and **DXF** via the headless Seamly2D CLI.
+[![CI](https://github.com/vera-locale/seamly2d-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vera-locale/seamly2d-mcp/actions/workflows/ci.yml)
+
+A production-grade **Model Context Protocol (MCP)** server in strict TypeScript that enables AI agents to programmatically draft parametric [Seamly2D](https://seamly.io/) sewing patterns (`.sm2d` `v0.7.0`), manage body measurement tables (`.smme` `<smis>` `v0.3.4`), inspect existing drafts, and compile/export patterns to **SVG**, **PDF**, and **DXF** via the headless Seamly2D CLI.
 
 ---
 
 ## Features
 
-- **Symbolic Parametric AST Builder (`src/domain/`):** Agents draft using human-readable symbols (`"A"`, `"A1"`, `"back_neckline"`). `PatternAstBuilder` enforces chronological DAG ordering, validates reference kinds, allocates strictly sequential globally unique integer IDs (`1, 2, 3...`), and automatically projects `<modeling>` proxies and clockwise `<details>` cuttable contours.
-- **Deterministic XML Serializers & Inspector (`src/infrastructure/`):** Serializes Seamly2D `.sm2d` (`v0.7.0`) and `.smme` (`v0.5.0`) files and round-trip parses existing drafts back into clean JSON with resolved symbolic references.
-- **Headless CLI Export Wrapper:** Invokes the local Seamly2D CLI via `execFile` for SVG (`0`), PDF (`1`), and DXF (`2`) exports, mapping `qMuParser` and XML parser errors into structured diagnostics.
+- **Symbolic Parametric AST Builder (`src/domain/`):** Agents draft using human-readable symbols (`"A"`, `"A1"`, `"back_neckline"`). `PatternAstBuilder` enforces chronological DAG ordering, validates reference kinds, allocates strictly sequential globally unique integer IDs (`1, 2, 3...`), and automatically projects `<modeling>` proxies and clockwise `<pieces>` cuttable contours.
+- **Seamly2D XSD-Compliant XML Serializers & Inspector (`src/infrastructure/`):** Serializes Seamly2D `.sm2d` (`pattern/v0.7.0.xsd`) and `.smme` (`individual_size_measurements/v0.3.4.xsd`) files and round-trip parses both modern and legacy drafts back into clean JSON with resolved symbolic references.
+- **Headless CLI Export Wrapper:** Invokes the local Seamly2D CLI via `execFile` (`-b <basename> -d <destination> -f <0|1|2> -m <measurements> <pattern>`) for SVG (`0`), PDF (`1`), and DXF (`2`) exports, mapping `qMuParser` and XML parser errors into structured diagnostics.
 - **4 MCP Tools:**
   1. `manage_measurements` — Create, merge, or overwrite `.smme` measurement tables.
   2. `build_parametric_pattern` — Validate, resolve, serialize, and save `.sm2d` patterns.
@@ -17,10 +19,20 @@ A production-grade **Model Context Protocol (MCP)** server in strict TypeScript 
 
 ---
 
+## Documentation
+
+- [Architecture Guide](./docs/ARCHITECTURE.md) — Clean Architecture layers, dependency rules, and AST pipeline.
+- [MCP Tools & Formula Reference](./docs/TOOLS_REFERENCE.md) — All 4 tools, 11 `PointNode` types, `qMuParser` rules, and error codes.
+- [Contributing Guide](./CONTRIBUTING.md) — Local setup, quality gates, and opt-in real Seamly2D CLI testing.
+
+---
+
 ## Installation
 
 ```bash
-npm install
+git clone https://github.com/vera-locale/seamly2d-mcp.git
+cd seamly2d-mcp
+npm ci
 npm run build
 ```
 
@@ -37,7 +49,17 @@ npm run build
 
 ## MCP Client Configuration
 
-Add `seamly2d-mcp` to your MCP client configuration (e.g., Claude Desktop, Cursor, or Antigravity):
+### Claude Code CLI
+
+```bash
+claude mcp add seamly2d \
+  --scope user \
+  -e SEAMLY_WORKSPACE=/absolute/path/to/your/patterns \
+  -e SEAMLY2D_PATH=/Applications/Seamly2D.app/Contents/MacOS/Seamly2D \
+  -- node /absolute/path/to/seamly2d-mcp/dist/index.js
+```
+
+### Claude Desktop / Antigravity (`mcp_config.json` / `claude_desktop_config.json`)
 
 ```json
 {
@@ -58,6 +80,8 @@ Add `seamly2d-mcp` to your MCP client configuration (e.g., Claude Desktop, Curso
 
 ## End-to-End Example Workflow: Bodice Back Block
 
+> **Note on measurement names:** Use Seamly2D standard measurement names (`bust_circ`, `waist_circ`, `neck_circ`, `neck_back_to_waist_b`, `shoulder_length`), or prefix any custom measurement name with `@` (e.g., `@back_waist_length`) for strict Seamly2D CLI validation.
+
 ### Step 1: Create Body Measurements (`manage_measurements`)
 
 ```json
@@ -69,7 +93,7 @@ Add `seamly2d-mcp` to your MCP client configuration (e.g., Claude Desktop, Curso
     "bust_circ": 92,
     "waist_circ": 74,
     "neck_circ": 36,
-    "back_waist_length": 41,
+    "@back_waist_length": 41,
     "shoulder_length": 12.5
   }
 }
@@ -90,13 +114,13 @@ Add `seamly2d-mcp` to your MCP client configuration (e.g., Claude Desktop, Curso
       "name": "Bodice_Back",
       "elements": [
         { "type": "single", "name": "A", "x": 1, "y": 1 },
-        { "type": "endLine", "name": "A1", "basePoint": "A", "length": "back_waist_length", "angle": 270 },
+        { "type": "endLine", "name": "A1", "basePoint": "A", "length": "@back_waist_length", "angle": 270 },
         { "type": "endLine", "name": "A2", "basePoint": "A", "length": "bust_circ / 4 + #ease_bust", "angle": 0 },
         { "type": "pointOfIntersection", "name": "A3", "firstPoint": "A2", "secondPoint": "A1" },
         { "type": "endLine", "name": "A4", "basePoint": "A", "length": "neck_circ / 6 + 0.5", "angle": 0 },
         { "type": "endLine", "name": "A5", "basePoint": "A", "length": "2", "angle": 270 },
         { "type": "spline", "name": "back_neckline", "point1": "A5", "point4": "A4", "angle1": 0, "angle2": 270, "length1": "Line_A_A4 * 0.55", "length2": "1.1" },
-        { "type": "endLine", "name": "A6", "basePoint": "A2", "length": "back_waist_length / 2 + 2", "angle": 270 },
+        { "type": "endLine", "name": "A6", "basePoint": "A2", "length": "@back_waist_length / 2 + 2", "angle": 270 },
         { "type": "endLine", "name": "A7", "basePoint": "A4", "length": "shoulder_length", "angle": 342 },
         { "type": "spline", "name": "back_armhole", "point1": "A7", "point4": "A6", "angle1": 252, "angle2": 180, "length1": "6.5", "length2": "5.5" },
         { "type": "endLine", "name": "A8", "basePoint": "A1", "length": "waist_circ / 4 + #ease_waist", "angle": 0 }
