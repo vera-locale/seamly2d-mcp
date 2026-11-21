@@ -51,7 +51,12 @@ jobs:
             ${{ steps.pack.outputs.tarball }}.sha256
 
       - name: Publish to npm (if NPM_TOKEN is configured)
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.NPM_TOKEN != ''
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            npm publish --access public
+          else
+            echo "NPM_TOKEN not configured; skipping npm publish."
+          fi
